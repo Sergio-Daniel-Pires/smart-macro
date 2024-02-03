@@ -26,7 +26,14 @@ class KeyStroke (Incremental):
         return False
 
     def __str__ (self):
-        return f"'{self.button}'"
+        return f"{self.button}"
+
+class SpecialKeyStroke (KeyStroke):
+    def __init__(self, button: str) -> None:
+        super().__init__(str(button).replace("Key.", ""))
+
+    def __str__ (self):
+        return f"'{self.button}' {self.times}x"
 
 class Click (Incremental):
     x: int
@@ -84,15 +91,15 @@ class Scroll (Incremental):
         return f"SCROLL {self.direction} ({self.x}, {self.y}) {self.times}x"
 
 class Groupable:
-    group_type: KeyStroke | Click | Scroll
+    group_type: KeyStroke | SpecialKeyStroke | Click | Scroll
     items: list[KeyStroke | Click | Scroll]
 
-    def __init__(self, new_obj: KeyStroke | Click | Scroll) -> None:
+    def __init__(self, new_obj: KeyStroke | SpecialKeyStroke | Click | Scroll) -> None:
         self.items = []
         self.add_new(new_obj)
         self.group_type = type(new_obj)
 
-    def add_new (self, new_obj: KeyStroke | Click | Scroll):
+    def add_new (self, new_obj: KeyStroke | SpecialKeyStroke | Click | Scroll):
         if len(self.items) and self.items[-1] == new_obj:
             self.items[-1].increment()
 
@@ -100,17 +107,9 @@ class Groupable:
             self.items.append(new_obj)
 
     def __str__(self) -> str:
-        return f"{self.group_type}: {', '.join(str(item) for item in self.items)}"
+        if self.group_type == KeyStroke:
+            word = ''.join(str(item) for item in self.items)
+            return f"{self.group_type}: '{word}'"
 
-# class KeyboardStroke (Groupable):
-#     def __init__ (self) -> None:
-#         super().__init__()
-
-# class MouseClick (Groupable):
-#     clicks: list[Click]
-
-#     def __init__(self) -> None:
-#         self.clicks = []
-
-# class MouseScroll (Groupable):
-#     scrolls: list[Scroll]
+        else:
+            return f"{self.group_type}: {', '.join(str(item) for item in self.items)}"

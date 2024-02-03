@@ -2,9 +2,11 @@ from pynput import mouse, keyboard
 import pyautogui
 import logging
 
-from models import KeyStroke, Click, Scroll, Groupable
+from models import SpecialKeyStroke, KeyStroke, Click, Scroll, Groupable
+from config import TOGGLE_RECORD
 
 logger = logging.getLogger("PYMACRO")
+logging.basicConfig(level=logging.DEBUG)
 
 START, END = range(2)
 
@@ -33,11 +35,11 @@ class RecordMacro:
             on_click=self.on_click, on_scroll=self.on_scroll
         )
 
-    def add_new (self, new_obj: KeyStroke | Click | Scroll) -> bool:
+    def add_new (self, new_obj: KeyStroke | SpecialKeyStroke | Click | Scroll) -> bool:
         if not self.recording:
             return False
 
-        if len(self.macro) == 1 or not isinstance(new_obj, self.macro[-1].group_type):
+        if len(self.macro) == 1 or not type(new_obj) == self.macro[-1].group_type:
             self.macro.append(Groupable(new_obj))
 
         else:
@@ -53,11 +55,15 @@ class RecordMacro:
         self.add_new(Scroll(x, y, dx))
 
     def on_press (self, key: keyboard.Key | keyboard._win32.KeyCode):
+        # Reserved keys
         try:
             new_key = KeyStroke(str(key.char))
 
         except AttributeError:
-            new_key = KeyStroke(key)
+            new_key = SpecialKeyStroke(key)
+
+        if new_key.button == TOGGLE_RECORD:
+            self.toggle_record()
 
         self.add_new(new_key)
 
@@ -65,6 +71,12 @@ class RecordMacro:
         if key == keyboard.Key.esc:
             self.mouse_listener.stop()
             return False
+
+    def toggle_record (self):
+        self.recording = not self.recording
+        logger.error(
+            f"Gravacao de macro: {'LIGADA' if self.recording else 'DESLIGADA'}"
+        )
 
     def export (self):
         for idx, step in enumerate(self.macro):
@@ -76,8 +88,23 @@ class RecordMacro:
             k_listener.join()
             m_listener.join()
 
+        # Remove last "ESC"
+        last_input = self.macro[-1]
+        if isinstance(last_input, Groupable):
+            last_input = last_input.items
+
+            if len(last_input) == 1:
+                del self.macro[-1]
+
+            else:
+                del last_input[-1]
+
         self.macro.append(END)
 
-macro = RecordMacro()
-macro.start()
-print(macro.export())
+def main (args: list[str] = None):
+    macro = RecordMacro()
+    macro.start()
+    print(macro.export())
+
+if __name__ == "__main__":
+    main()
