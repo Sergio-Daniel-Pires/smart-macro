@@ -1,0 +1,36 @@
+{
+  "name": "recorder-ts",
+  "version": "1.0.0",
+  "description": "Record, edit and play macros",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron ./dist/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "iohook": "^0.9.3"
+  },
+  "engines": {
+    "npm": "7.7.6",
+    "node": "15.14.0"
+  },
+  "devDependencies": {
+    "electron": "^12.2.3"
+  },
+  "author": "Sergio Pires",
+  "license": "ISC",
+  "iohook": {
+    "targets": [
+      "node-88",
+      "electron-87"
+    ],
+    "platforms": [
+      "win32",
+      "darwin"
+    ],
+    "arches": [
+      "x64",
+      "ia32"
+    ]
+  }
+}
