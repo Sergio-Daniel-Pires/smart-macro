@@ -11,13 +11,12 @@ class Incremental:
 
 class KeyStroke (Incremental):
     button: str
-    times: int
 
-    def __init__(self, button: str) -> None:
+    def __init__ (self, button: str) -> None:
         super().__init__()
         self.button = button
 
-    def __eq__(self, __value: object) -> bool:
+    def __eq__ (self, __value: object) -> bool:
         if not isinstance(__value, type(self)):
             return False
 
@@ -25,6 +24,9 @@ class KeyStroke (Incremental):
             return True
 
         return False
+
+    def __str__ (self):
+        return f"'{self.button}'"
 
 class Click (Incremental):
     x: int
@@ -47,6 +49,9 @@ class Click (Incremental):
 
         return False
 
+    def __str__ (self):
+        return f"'{self.button}' ({self.x}, {self.y}) {self.times}x"
+
 class Scroll (Incremental):
     x: int
     y: int
@@ -57,7 +62,6 @@ class Scroll (Incremental):
         self.x = x
         self.y = y
         self.direction = self.get_direction(dx)
-        self.times = 1
 
     @classmethod
     def get_direction (cls, dx: int) -> str:
@@ -76,6 +80,9 @@ class Scroll (Incremental):
 
         return False
 
+    def __str__ (self):
+        return f"SCROLL {self.direction} ({self.x}, {self.y}) {self.times}x"
+
 class Groupable:
     group_type: KeyStroke | Click | Scroll
     items: list[KeyStroke | Click | Scroll]
@@ -91,6 +98,9 @@ class Groupable:
 
         else:
             self.items.append(new_obj)
+
+    def __str__(self) -> str:
+        return f"{self.group_type}: {', '.join(str(item) for item in self.items)}"
 
 # class KeyboardStroke (Groupable):
 #     def __init__ (self) -> None:
