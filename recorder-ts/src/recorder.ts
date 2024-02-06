@@ -1,22 +1,30 @@
 import * as iohook from 'iohook';
-import { KeyStroke, SpecialKeyStroke, Click, Scroll, Groupable } from './models';
+import {
+    KeyStroke, SpecialKeyStroke, Click, Scroll, Groupable, WaitForTime, Actions
+} from './models';
+import * as fs from 'fs';
+import * as xmlbuilder from 'xmlbuilder';
+import { createOverlayWindow } from "./overlay";
+import { BrowserWindow } from 'electron';
 
-const START = 0;
-const END = 1;
-const TOGGLE_RECORD = 'your_toggle_record_key';
+const START_RECORD = 112;
+const STOP_RECORD = 27;
+const TOGGLE_RECORD = 119;
 
 export class RecordMacro {
     s_width: number;
     s_height: number;
     recording: boolean;
-    macro: Array<number | Groupable>;
+    macro: Array<Groupable>;
+    lastActionTime: number;
 
     constructor() {
         // const screenSize = robot.getScreenSize();
         // this.s_width = screenSize.width;
         // this.s_height = screenSize.height;
         this.recording = true;
-        this.macro = [START];
+        this.macro = [ new Groupable(new Actions("START")) ];
+        this.lastActionTime = Date.now();
 
         iohook.on('mouseup', (event) => this.onMouseClick(event));
         iohook.on('mousewheel', (event) => this.onMouseScroll(event));
@@ -30,51 +38,58 @@ export class RecordMacro {
             return false;
         }
 
-        const lastItem = this.macro[this.macro.length - 1];
-        if (
-            this.macro.length === 1 || !(lastItem instanceof Groupable &&
-            lastItem.groupType === newObj.constructor)
-        ){
-            this.macro.push(new Groupable(newObj));
-        } else {
-            lastItem.addNew(newObj);
+        let lastItem = this.macro[this.macro.length - 1];
+        if (lastItem.items.length && lastItem.items[0].constructor !== newObj.constructor) {
+            this.macro.push(new Groupable());
+            lastItem = this.macro[this.macro.length - 1];
+        }
+
+        // Saves time between actions
+        // Use delay for < 1s or wait for time for > 1s
+        let waitFor = null;
+        if (newObj.delay > 1000) {
+            waitFor = new WaitForTime(newObj.delay);
+            newObj.delay = null;
+        }
+
+        this.lastActionTime = Date.now();
+        lastItem.addNew(newObj);
+
+        if (waitFor) {
+            lastItem.addNew(waitFor)
         }
 
         return true;
     }
 
     onMouseClick(event: any): void {
-        console.log(event);
         if (this.recording) {
-            const click = new Click(event.x, event.y, event.button);
+            const click = new Click(this.lastActionTime, event.x, event.y, event.button);
             this.addNew(click);
         }
     }
 
     onMouseScroll(event: any): void {
-        console.log(event);
         if (this.recording) {
-            const scroll = new Scroll(event.x, event.y, event.amount);
+            const scroll = new Scroll(this.lastActionTime, event.x, event.y, event.amount);
             this.addNew(scroll);
         }
     }
 
     onKeyPress(event: any): void {
-        console.log(event);
         if (this.recording) {
-            const keyStroke = new KeyStroke(event.rawcode);
+            const keyStroke = new KeyStroke(this.lastActionTime, event.rawcode);
             this.addNew(keyStroke);
-
-            if (keyStroke.button === TOGGLE_RECORD) {
-                this.toggleRecord();
-            }
         }
     }
 
     onKeyRelease(event: any): void {
-        console.log(event);
-        if (event.rawcode === "ESC") {
-            iohook.stop();
+        if (event.rawcode === START_RECORD) {
+            this.startRecording();
+        } else if (event.rawcode === STOP_RECORD) {
+            this.stopRecording();
+        } else if (event.rawcode === TOGGLE_RECORD) {
+            this.toggleRecord();
         }
     }
 
@@ -83,20 +98,38 @@ export class RecordMacro {
         console.log(`Gravação de macro: ${this.recording ? 'LIGADA' : 'DESLIGADA'}`);
     }
 
+    stopRecording(): void {
+        if (this.recording){
+            console.log("Stopping recording...")
+            this.recording = false;
+
+            this.macro.push(new Groupable(new Actions("END")));
+            iohook.stop();
+            this.export();
+        }
+    }
+
+    startRecording(): void {
+        // if (this.recording) {
+            console.log("Starting recording...");
+            this.recording = true;
+
+            const overlayWindow: BrowserWindow = createOverlayWindow();
+            overlayWindow.show();
+        // }
+    }
+
     export(): void {
-        this.macro.push(END);
-        console.log(this.macro.map((item, idx) => `${idx}. ${item.toString()}`).join('\n'));
-    }
+        const xmlDoc = xmlbuilder.create('Macro');
+        this.macro.forEach((group) => {
+            let groupable = xmlDoc.element("Groupable")
 
-    start(): void {
-        console.log('Iniciando gravação de macro...');
+            group.items.forEach((step) => {
+                groupable.element(step.toXML());
+            })
+        });
+
+        const xmlString = xmlDoc.end({ pretty: true });
+        fs.writeFileSync('macro.xml', xmlString, 'utf-8');
     }
 }
-
-function main(args: string[]): void {
-    const macroRecorder = new RecordMacro();
-    macroRecorder.start();
-    // O restante da lógica para controlar quando parar a gravação e exportar a macro
-}
-
-main(process.argv.slice(2));

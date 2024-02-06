@@ -19,7 +19,6 @@ function createWindow() {
   mainWindow.webContents.openDevTools();
 
   const macro = new RecordMacro();
-  macro.start();
 }
 
 // This method will be called when Electron has finished

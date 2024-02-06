@@ -1,8 +1,10 @@
 export abstract class Incremental {
     times: number;
+    delay: number;
 
-    constructor() {
+    constructor(lastActionTime: number) {
         this.times = 1;
+        this.delay = Date.now() - lastActionTime;
     }
 
     increment(): void {
@@ -10,4 +12,5 @@ export abstract class Incremental {
     }
 
     abstract equals(value: Incremental): boolean;
+    abstract toXML(): string;
 }

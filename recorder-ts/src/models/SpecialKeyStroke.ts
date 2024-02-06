@@ -1,11 +1,26 @@
 import { KeyStroke } from "./KeyStroke";
 
 export class SpecialKeyStroke extends KeyStroke {
-    constructor(button: string) {
-        super(button.replace("Key.", ""));
+    constructor(lastActionTime: number, button: string) {
+        super(lastActionTime, button);
     }
 
     toString(): string {
         return `'${this.button}' ${this.times}x`;
+    }
+
+    toXML(): any {
+        let baseObject: any = {
+            SpecialKeyStroke: {
+                '@times': this.times,
+                '@button': this.button
+            }
+        }
+
+        if (this.delay) {
+            baseObject.SpecialKeyStroke['@delay'] = this.delay;
+        }
+
+        return baseObject;
     }
 }

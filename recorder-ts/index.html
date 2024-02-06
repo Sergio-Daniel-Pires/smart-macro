@@ -1,25 +1,24 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Hello World!</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
-    />
-    <meta
-      http-equiv="X-Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'"
-    />
-  </head>
-  <body>
-    <h1>Hello World!</h1>
-    We are using Node.js <span id="node-version"></span>, Chromium
-    <span id="chrome-version"></span>, and Electron
-    <span id="electron-version"></span>.
-
-    <!-- You can also require other files to run in this process -->
-    <script src="./dist/renderer.js"></script>
-  </body>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravador de Macro</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Você pode criar um arquivo CSS separado para estilizar a interface -->
+</head>
+<body>
+    <nav class="navbar">
+        <ul>
+            <li><a href="#">Início</a></li>
+            <li><a href="#">Configurações</a></li>
+        </ul>
+    </nav>
+    <div class="buttons">
+        <button id="recordBtn" class="actionBtn">Record (F1)</button>
+        <button id="pauseBtn" class="actionBtn">Pausar (F8)</button>
+        <button id="stopBtn" class="actionBtn">Parar (Esc)</button>
+        <button id="exitBtn" class="actionBtn">Sair</button>
+    </div>
+    <script src="./dist/renderer.js"></script> <!-- Seu código JavaScript para lidar com os eventos dos botões -->
+</body>
 </html>

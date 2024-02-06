@@ -3,8 +3,8 @@ import { Incremental } from "./Incremental";
 export class KeyStroke extends Incremental {
     button: string;
 
-    constructor(button: string) {
-        super();
+    constructor(lastActionTime: number, button: string) {
+        super(lastActionTime);
         this.button = button;
     }
 
@@ -14,5 +14,19 @@ export class KeyStroke extends Incremental {
 
     toString(): string {
         return `${this.button}`;
+    }
+
+    toXML(): any {
+        let baseObject: any = {
+            KeyStroke: {
+                '@button': this.button
+            }
+        }
+
+        if (this.delay) {
+            baseObject.KeyStroke['@delay'] = this.delay;
+        }
+
+        return baseObject;
     }
 }
