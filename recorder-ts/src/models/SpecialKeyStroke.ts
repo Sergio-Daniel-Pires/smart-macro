@@ -1,7 +1,7 @@
 import { KeyStroke } from "./KeyStroke";
 
 export class SpecialKeyStroke extends KeyStroke {
-    constructor(lastActionTime: number, button: string) {
+    constructor(lastActionTime: number, button: number) {
         super(lastActionTime, button);
     }
 

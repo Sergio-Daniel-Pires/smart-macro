@@ -1,9 +1,9 @@
 import { Incremental } from "./Incremental";
 
 export class KeyStroke extends Incremental {
-    button: string;
+    button: number;
 
-    constructor(lastActionTime: number, button: string) {
+    constructor(lastActionTime: number, button: number) {
         super(lastActionTime);
         this.button = button;
     }

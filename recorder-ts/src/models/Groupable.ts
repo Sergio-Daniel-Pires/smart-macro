@@ -39,32 +39,30 @@ export class Groupable {
         }
     }
 
-    toXML(): any {
+    collapseList(): Array<Incremental | WaitForTime | Actions | KeyWord> {
         // Create new XML element
-        let groupableXML: any = {
-            Groupable: {
-                '@steps': this.items.length,
-                '#list': []
-            }
-        };
-
         // Add items to xml element
         let groupingKeys: boolean = false;
-        let groupableList: Array<any> = groupableXML.Groupable['#list'];
+        let newItems: Array<Incremental | WaitForTime | Actions | KeyWord> = [];
 
         this.items.forEach(item => {
-            if (item.constructor === KeyStroke) {
+            if (item.constructor === KeyStroke && item['button'] >= 65 && item['button'] <= 90) {
                 if (!groupingKeys){
-                    groupableList.push(new KeyWord(item['button']))
+                    newItems.push(new KeyWord(item))
                     groupingKeys = true;
                 } else {
-                    groupableList[groupableList.length - 1].newChar(item['button'], item['delay'])
+                    let lastItem = newItems[newItems.length - 1];
+
+                    if (lastItem.constructor === KeyWord) {
+                        lastItem.newChar(item);
+                    }
                 }
             } else {
                 groupingKeys = false;
+                newItems.push(item);
             }
         });
 
-        return groupableXML;
+        return newItems;
     }
 }

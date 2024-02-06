@@ -121,10 +121,12 @@ export class RecordMacro {
 
     export(): void {
         const xmlDoc = xmlbuilder.create('Macro');
+
         this.macro.forEach((group) => {
             let groupable = xmlDoc.element("Groupable")
 
-            group.items.forEach((step) => {
+            let items = group.collapseList();
+            items.forEach((step) => {
                 groupable.element(step.toXML());
             })
         });

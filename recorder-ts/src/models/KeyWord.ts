@@ -1,11 +1,12 @@
 import { KeyStroke } from "./KeyStroke";
 
 export class KeyWord {
-    word: Array<string>
+    word: Array<number>
     delay: Array<number>
 
-    constructor(word: string) {
-        this.word = [word];
+    constructor(keyStroke: KeyStroke) {
+        this.word = [keyStroke.button];
+        this.delay = [keyStroke.delay];
     }
 
     equals(value: KeyWord): boolean {
@@ -24,10 +25,14 @@ export class KeyWord {
     toXML(): any {
         let baseObject: any = {
             KeyWord: {
-                '#text': this.word,
+                '#text': [],
                 '@avgDelay': this.delay.reduce((a, b) => a+b, 0) / this.word.length
             }
         }
+
+        this.word.forEach((char) =>{
+            baseObject.KeyWord['#text'].push(String.fromCharCode(char));
+        })
 
         return baseObject;
     }
