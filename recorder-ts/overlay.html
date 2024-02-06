@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Overlay Window</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #overlay {
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: transparent;
+      box-sizing: border-box;
+    }
+    .recording {
+      border: 5px solid red;
+    }
+    .not-recording {
+      border: 5px solid blue;
+    }
+    .status-text {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+    }
+  </style>
+
+</head>
+<body>
+  <div id="overlay" class="recording">
+    <div class="status-text">Recording...</div>
+  </div>
+  <script>var exports = {};</script>
+  <script src="./dist/overlayWindow.js"></script>
+</body>
+</html>

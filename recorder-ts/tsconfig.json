@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+    "moduleResolution": "Node",
     "noImplicitAny": true,
+    "target": "ESNext",
     "sourceMap": true,
     "outDir": "dist",
     "baseUrl": ".",
