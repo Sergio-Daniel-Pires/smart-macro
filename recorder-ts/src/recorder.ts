@@ -22,14 +22,14 @@ export class RecordMacro {
         // const screenSize = robot.getScreenSize();
         // this.s_width = screenSize.width;
         // this.s_height = screenSize.height;
-        this.recording = true;
+        this.recording = false;
         this.macro = [ new Groupable(new Actions("START")) ];
         this.lastActionTime = Date.now();
 
         iohook.on('mouseup', (event) => this.onMouseClick(event));
         iohook.on('mousewheel', (event) => this.onMouseScroll(event));
         iohook.on('keydown', (event) => this.onKeyPress(event));
-        iohook.on('keyup', (event) => this.onKeyRelease(event));
+        //iohook.on('keyup', (event) => this.onKeyRelease(event));
         iohook.start();
     }
 
@@ -77,25 +77,25 @@ export class RecordMacro {
     }
 
     onKeyPress(event: any): void {
+        if (event.rawcode === START_RECORD) {
+            this.startRecording();
+            return;
+        } else if (event.rawcode === STOP_RECORD) {
+            this.stopRecording();
+        } else if (event.rawcode === TOGGLE_RECORD) {
+            this.toggleRecord();
+        }
+        console.log(`Key ${event.rawcode} ${this.recording}`);
+
         if (this.recording) {
             const keyStroke = new KeyStroke(this.lastActionTime, event.rawcode);
             this.addNew(keyStroke);
         }
     }
 
-    onKeyRelease(event: any): void {
-        if (event.rawcode === START_RECORD) {
-            this.startRecording();
-        } else if (event.rawcode === STOP_RECORD) {
-            this.stopRecording();
-        } else if (event.rawcode === TOGGLE_RECORD) {
-            this.toggleRecord();
-        }
-    }
-
     toggleRecord(): void {
         this.recording = !this.recording;
-        console.log(`Gravação de macro: ${this.recording ? 'LIGADA' : 'DESLIGADA'}`);
+        console.log(`Macro Recording: ${this.recording ? 'ON' : 'OFF'}`);
     }
 
     stopRecording(): void {
@@ -110,13 +110,13 @@ export class RecordMacro {
     }
 
     startRecording(): void {
-        // if (this.recording) {
+        if (!this.recording) {
             console.log("Starting recording...");
             this.recording = true;
 
             const overlayWindow: BrowserWindow = createOverlayWindow();
             overlayWindow.show();
-        // }
+        }
     }
 
     export(): void {
