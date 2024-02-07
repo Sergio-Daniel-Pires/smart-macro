@@ -15,6 +15,7 @@ export class RecordMacro {
     s_width: number;
     s_height: number;
     macro: Array<Groupable>;
+    lastObj: KeyStroke | SpecialKeyStroke | Click | Scroll
     lastActionTime: number;
     recording: boolean;
     started: boolean;
@@ -25,11 +26,8 @@ export class RecordMacro {
         // const screenSize = robot.getScreenSize();
         // this.s_width = screenSize.width;
         // this.s_height = screenSize.height;
-        this.macro = [ new Groupable(new Actions("START")) ];
-        this.lastActionTime = Date.now();
-        this.started = false;
-        this.recording = false;
 
+        this.resetVars();
         // External children
         this.overlayWindow = createOverlayWindow();
 
@@ -39,6 +37,15 @@ export class RecordMacro {
         iohook.on('keydown', (event) => this.onKeyPress(event));
         iohook.on('keyup', (event) => this.onKeyRelease(event)); // Removed to use only keypress
         iohook.start();
+    }
+
+    resetVars(): void {
+        this.macro = [ new Groupable(new Actions("START")) ];
+        this.lastActionTime = null;
+        this.started = false;
+        this.recording = false;
+
+        this.lastObj = null;
     }
 
     addNew(newObj: KeyStroke | SpecialKeyStroke | Click | Scroll): boolean {
@@ -54,33 +61,35 @@ export class RecordMacro {
             lastGroup = this.macro[this.macro.length - 1];
         }
 
-        // Saves time between actions
-        // Use delay for < 1s or wait for time for > 1s
-        let waitFor = null;
-        if (newObj.delay > 1000) {
-            waitFor = new WaitForTime(newObj.delay);
-            newObj.delay = null;
-        }
-
-        // Add new object and register last action time if needed
         this.lastActionTime = Date.now();
         lastGroup.addNew(newObj);
-
-        if (waitFor) {
-            lastGroup.addNew(waitFor)
-        }
+        this.lastObj = newObj;
 
         return true;
     }
 
-    updateHolding(newObj: KeyStroke | SpecialKeyStroke): void {
+    onKeyRelease(newObj: KeyStroke | SpecialKeyStroke): void {
+        // Update last button releaseIn or insert new holding group
+        if (newObj === this.lastObj) {
+            this.lastObj.release();
+        } else {
+            let holding = this.macro[this.macro.length - 1].holding
+            let isHolding = holding.indexOf(newObj)
 
+            if (isHolding) {
+                delete holding[isHolding];
+            } else {
+                holding
+            }
+
+            this.macro.push(new Groupable(null, holding));
+        }
     }
 
     onMouseClick(event: any): void {
         // Record mouse Click
         if (this.recording) {
-            const click = new Click(this.lastActionTime, event.x, event.y, event.button);
+            const click = new Click(event.x, event.y, event.button);
             this.addNew(click);
         }
     }
@@ -88,7 +97,7 @@ export class RecordMacro {
     onMouseScroll(event: any): void {
         // Record mouse Scroll
         if (this.recording) {
-            const scroll = new Scroll(this.lastActionTime, event.x, event.y, event.amount);
+            const scroll = new Scroll(event.x, event.y, event.amount);
             this.addNew(scroll);
         }
     }
@@ -109,13 +118,19 @@ export class RecordMacro {
         }
 
         if (this.recording) {
-            const keyStroke = new KeyStroke(this.lastActionTime, event.rawcode);
+            let keyStroke: KeyStroke | SpecialKeyStroke;
+
+            if (
+                (event.rawcode >= 65 && event <= 90) || // A-Z
+                (event.rawcode == 32)
+            ) {
+                keyStroke = new KeyStroke(event.rawcode);
+            } else {
+                keyStroke = new SpecialKeyStroke(event);
+            }
+
             this.addNew(keyStroke);
         }
-    }
-
-    onKeyRelease(event: any) {
-        console.log(event.rawcode);
     }
 
     toggleRecordBool(newValue?: boolean): void {
@@ -147,6 +162,9 @@ export class RecordMacro {
             // Add END to list and export to XML
             this.macro.push(new Groupable(new Actions("END")));
             this.export();
+
+            // Reset macro
+            this.resetVars();
         }
     }
 
@@ -168,9 +186,20 @@ export class RecordMacro {
         this.macro.forEach((group) => {
             let groupable = xmlDoc.element("Groupable")
 
-            let items = group.collapseList();
-            items.forEach((step) => {
-                groupable.element(step.toXML());
+            // Create list to items that are holding
+            let holding = group.holding;
+            if (holding.length) {
+                let holdingGroup = groupable.element("Holding");
+
+                group.holding.forEach((holding) => {
+                    holdingGroup.element(holding.toXML());
+                })
+            }
+
+            // Add Keystrokes Step-By-Step
+            let steps = groupable.element("Steps");
+            group.collapseList().forEach((step) => {
+                steps.element(step.toXML());
             })
         });
 
