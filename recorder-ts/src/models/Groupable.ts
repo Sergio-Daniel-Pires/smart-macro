@@ -8,11 +8,18 @@ export class Groupable {
     items: Array<Incremental | WaitForTime | Actions>;
     holding: Array<Incremental>
 
-    constructor(newObj: Incremental | WaitForTime | Actions = null) {
+    constructor(
+        newObj?: Incremental | WaitForTime | Actions, holding?: Array<Incremental>
+    ) {
         this.items = [];
+        this.holding = [];
 
-        if (!newObj === null) {
+        if (newObj) {
             this.items.push(newObj);
+        }
+
+        if (holding) {
+            this.holding = holding;
         }
     }
 
@@ -47,7 +54,7 @@ export class Groupable {
         let newItems: Array<Incremental | WaitForTime | Actions | KeyWord> = [];
 
         this.items.forEach(item => {
-            if (item.constructor === KeyStroke && item['button'] >= 65 && item['button'] <= 90) {
+            if (item.constructor === KeyStroke) {
                 if (!groupingKeys){
                     newItems.push(new KeyWord(item))
                     groupingKeys = true;

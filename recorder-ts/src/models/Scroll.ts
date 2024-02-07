@@ -7,8 +7,8 @@ export class Scroll extends Incremental {
     y: number;
     direction: Direction;
 
-    constructor(lastActionTime: number, x: number, y: number, dx: number) {
-        super(lastActionTime);
+    constructor(x: number, y: number, dx: number) {
+        super();
         this.x = x;
         this.y = y;
         this.direction = this.getDirection(dx);
@@ -22,10 +22,6 @@ export class Scroll extends Incremental {
         return this.direction === value.direction;
     }
 
-    toString(): string {
-        return `SCROLL ${this.direction} (${this.x}, ${this.y}) ${this.times}x`;
-    }
-
     toXML(): any {
         let baseObject: any = {
             Scroll: {
@@ -34,10 +30,6 @@ export class Scroll extends Incremental {
                 '@y': this.y,
                 '@direction': this.direction
             }
-        }
-
-        if (this.delay) {
-            baseObject.Scroll['@delay'] = this.delay;
         }
 
         return baseObject;

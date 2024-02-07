@@ -1,19 +1,35 @@
 import { KeyStroke } from "./KeyStroke";
 
 enum KeyEnum {
-    shift = 16,
-    ctrl = 17,
-    alt = 18,
     esc = 27,
+    f1 = 112,
+    f2 = 113,
+    f3 = 114,
+    f4 = 115,
+    f5 = 116,
+    f6 = 117,
+    f7 = 118,
+    f8 = 119,
+    f9 = 120,
+    f10 = 121,
+    f11 = 122,
+    f12 = 123,
 }
 
 export class SpecialKeyStroke extends KeyStroke {
-    constructor(lastActionTime: number, button: number) {
-        super(lastActionTime, button);
-    }
+    name: string
 
-    toString(): string {
-        return `'${this.button}' ${this.times}x`;
+    constructor(event: any) {
+        let button: number = event.rawcode
+        super(button);
+
+        if (event.shiftKey) { this.name = "shift" }
+        else if (event.ctrlKey) { this.name = "ctrl" }
+        else if (event.altKey) { this.name = "alt" }
+        else if (event.metaKey) { this.name = "meta" }
+        else {
+            this.name = KeyEnum[button as KeyEnum];
+        }
     }
 
     equals(value: KeyStroke | SpecialKeyStroke): boolean {
@@ -24,12 +40,9 @@ export class SpecialKeyStroke extends KeyStroke {
         let baseObject: any = {
             SpecialKeyStroke: {
                 '@times': this.times,
-                '@button': this.button
+                '@button': this.button,
+                '@test': this.name
             }
-        }
-
-        if (this.delay) {
-            baseObject.SpecialKeyStroke['@delay'] = this.delay;
         }
 
         return baseObject;

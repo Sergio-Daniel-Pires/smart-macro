@@ -5,8 +5,8 @@ export class Click extends Incremental {
     y: number;
     button: string;
 
-    constructor(lastActionTime: number, x: number, y: number, button: string) {
-        super(lastActionTime);
+    constructor(x: number, y: number, button: string) {
+        super();
         this.x = x;
         this.y = y;
         this.button = button;
@@ -14,8 +14,7 @@ export class Click extends Incremental {
 
     equals(value: Click): boolean {
         return (
-            this.delay == value.delay && this.x === value.x &&
-            this.y === value.y && this.button === value.button
+            this.x === value.x && this.y === value.y && this.button === value.button
         );
     }
 
@@ -31,10 +30,6 @@ export class Click extends Incremental {
                 '@y': this.y,
                 '@button': this.button,
             }
-        }
-
-        if (this.delay) {
-            baseObject.Click['@delay'] = this.delay;
         }
 
         return baseObject;

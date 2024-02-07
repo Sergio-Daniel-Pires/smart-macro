@@ -4,8 +4,8 @@ import { SpecialKeyStroke } from "./SpecialKeyStroke";
 export class KeyStroke extends Incremental {
     button: number;
 
-    constructor(lastActionTime: number, button: number) {
-        super(lastActionTime);
+    constructor(button: number) {
+        super();
         this.button = button;
     }
 
@@ -22,10 +22,6 @@ export class KeyStroke extends Incremental {
             KeyStroke: {
                 '@button': this.button
             }
-        }
-
-        if (this.delay) {
-            baseObject.KeyStroke['@delay'] = this.delay;
         }
 
         return baseObject;

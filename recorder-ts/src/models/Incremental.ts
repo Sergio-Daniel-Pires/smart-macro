@@ -1,16 +1,19 @@
 export abstract class Incremental {
     times: number;
-    delay: number;
-    holding: boolean;
+    pressed: number
+    releaseIn: number;
 
-    constructor(lastActionTime: number) {
+    constructor() {
         this.times = 1;
-        this.delay = Date.now() - lastActionTime;
-        this.holding = true;
+        this.pressed = Date.now();
     }
 
     increment(): void {
         this.times += 1;
+    }
+
+    release(): void {
+        this.releaseIn = this.pressed - Date.now();
     }
 
     abstract equals(value: Incremental): boolean;
