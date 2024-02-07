@@ -6,6 +6,7 @@ import { KeyWord } from "./KeyWord";
 
 export class Groupable {
     items: Array<Incremental | WaitForTime | Actions>;
+    holding: Array<Incremental>
 
     constructor(newObj: Incremental | WaitForTime | Actions = null) {
         this.items = [];

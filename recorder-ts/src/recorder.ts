@@ -6,7 +6,6 @@ import * as fs from 'fs';
 import * as xmlbuilder from 'xmlbuilder';
 import { createOverlayWindow } from "./overlay";
 import { BrowserWindow } from 'electron';
-import Store = require('electron-store');
 
 const START_RECORD = 112;
 const STOP_RECORD = 27;
@@ -18,6 +17,7 @@ export class RecordMacro {
     macro: Array<Groupable>;
     lastActionTime: number;
     recording: boolean;
+    started: boolean;
 
     overlayWindow: BrowserWindow;
 
@@ -27,6 +27,7 @@ export class RecordMacro {
         // this.s_height = screenSize.height;
         this.macro = [ new Groupable(new Actions("START")) ];
         this.lastActionTime = Date.now();
+        this.started = false;
         this.recording = false;
 
         // External children
@@ -36,7 +37,7 @@ export class RecordMacro {
         iohook.on('mouseup', (event) => this.onMouseClick(event));
         iohook.on('mousewheel', (event) => this.onMouseScroll(event));
         iohook.on('keydown', (event) => this.onKeyPress(event));
-        //iohook.on('keyup', (event) => this.onKeyRelease(event)); Removed to use only keypress
+        iohook.on('keyup', (event) => this.onKeyRelease(event)); // Removed to use only keypress
         iohook.start();
     }
 
@@ -46,10 +47,11 @@ export class RecordMacro {
         }
 
         // Create a new group if the new object are different from last
-        let lastItem = this.macro[this.macro.length - 1];
-        if (lastItem.items.length && lastItem.items[0].constructor !== newObj.constructor) {
+        // and holdings are different
+        let lastGroup = this.macro[this.macro.length - 1];
+        if (lastGroup.items.length && lastGroup.items[0].constructor !== newObj.constructor) {
             this.macro.push(new Groupable());
-            lastItem = this.macro[this.macro.length - 1];
+            lastGroup = this.macro[this.macro.length - 1];
         }
 
         // Saves time between actions
@@ -62,13 +64,17 @@ export class RecordMacro {
 
         // Add new object and register last action time if needed
         this.lastActionTime = Date.now();
-        lastItem.addNew(newObj);
+        lastGroup.addNew(newObj);
 
         if (waitFor) {
-            lastItem.addNew(waitFor)
+            lastGroup.addNew(waitFor)
         }
 
         return true;
+    }
+
+    updateHolding(newObj: KeyStroke | SpecialKeyStroke): void {
+
     }
 
     onMouseClick(event: any): void {
@@ -89,6 +95,8 @@ export class RecordMacro {
 
     onKeyPress(event: any): void {
         // Manage user inputs
+        console.log(event.rawcode);
+
         if (event.rawcode === START_RECORD) {
             this.startRecording();
             return;
@@ -104,6 +112,10 @@ export class RecordMacro {
             const keyStroke = new KeyStroke(this.lastActionTime, event.rawcode);
             this.addNew(keyStroke);
         }
+    }
+
+    onKeyRelease(event: any) {
+        console.log(event.rawcode);
     }
 
     toggleRecordBool(newValue?: boolean): void {
@@ -123,10 +135,11 @@ export class RecordMacro {
     }
 
     stopRecording(): void {
-        if (this.recording){
+        if (this.started) {
             // Stop IOHook
             console.log("Stopping recording...")
             this.toggleRecordBool(false);
+            this.started = false;
 
             // Hide Overlay
             this.overlayWindow.hide();
@@ -138,9 +151,10 @@ export class RecordMacro {
     }
 
     startRecording(): void {
-        if (!this.recording) {
+        if (!this.recording && !this.started) {
             console.log("Starting recording...");
             this.toggleRecordBool(true);
+            this.started = true;
 
             // Show Overlay
             this.overlayWindow.show();

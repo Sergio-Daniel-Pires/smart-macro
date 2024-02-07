@@ -1,5 +1,12 @@
 import { KeyStroke } from "./KeyStroke";
 
+enum KeyEnum {
+    shift = 16,
+    ctrl = 17,
+    alt = 18,
+    esc = 27,
+}
+
 export class SpecialKeyStroke extends KeyStroke {
     constructor(lastActionTime: number, button: number) {
         super(lastActionTime, button);
@@ -7,6 +14,10 @@ export class SpecialKeyStroke extends KeyStroke {
 
     toString(): string {
         return `'${this.button}' ${this.times}x`;
+    }
+
+    equals(value: KeyStroke | SpecialKeyStroke): boolean {
+        return this.button === value.button;
     }
 
     toXML(): any {

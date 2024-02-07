@@ -1,13 +1,20 @@
 import { ipcRenderer } from 'electron';
 
-ipcRenderer.on('recording-state-changed', (event, recording) => {
-  const statusElement = document.getElementById('overlay');
+ipcRenderer.on('recording-state-changed', (event: any, recording: boolean) => {
+  const overlayElement = document.getElementById('overlay');
+  const statusText = document.getElementById('status-text');
 
   if (recording) {
-    statusElement.classList.remove('not-recording');
-    statusElement.classList.add('recording');
+    overlayElement.classList.remove('not-recording');
+    overlayElement.classList.add('recording');
+
+    statusText.classList.add("pulse")
+    statusText.textContent = "Recording..."
   } else {
-    statusElement.classList.remove('recording');
-    statusElement.classList.add('not-recording');
+    overlayElement.classList.remove('recording');
+    overlayElement.classList.add('not-recording');
+
+    statusText.classList.remove("pulse")
+    statusText.textContent = "Paused"
   }
 });

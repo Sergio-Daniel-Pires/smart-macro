@@ -19,23 +19,41 @@
     }
     .recording {
       border: 5px solid red;
+      color: red;
     }
     .not-recording {
       border: 5px solid blue;
+      color: blue;
     }
-    .status-text {
+    #status-text {
       position: absolute;
       top: 10px;
       left: 50%;
       transform: translateX(-50%);
-      font-size: 20px;
+      font-size: 30px;
+      display: inline-block;
+    }
+    .pulse {
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
     }
   </style>
-
 </head>
 <body>
   <div id="overlay" class="recording">
-    <div class="status-text">Recording...</div>
+    <div id="status-text" class="pulse">
+      Recording...
+    </div>
   </div>
   <script>var exports = {};</script>
   <script src="./dist/overlayWindow.js"></script>

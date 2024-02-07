@@ -1,4 +1,5 @@
 import { Incremental } from "./Incremental";
+import { SpecialKeyStroke } from "./SpecialKeyStroke";
 
 export class KeyStroke extends Incremental {
     button: number;
@@ -8,7 +9,7 @@ export class KeyStroke extends Incremental {
         this.button = button;
     }
 
-    equals(value: KeyStroke): boolean {
+    equals(value: KeyStroke | SpecialKeyStroke): boolean {
         return this.button === value.button;
     }
 
