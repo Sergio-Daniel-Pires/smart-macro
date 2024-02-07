@@ -1,6 +1,6 @@
 import * as iohook from 'iohook';
 import {
-    KeyStroke, SpecialKeyStroke, Click, Scroll, Groupable, WaitForTime, Actions
+    KeyStroke, SpecialKeyStroke, Click, Scroll, Groupable, WaitForTime, Actions, Incremental
 } from './models';
 import * as fs from 'fs';
 import * as xmlbuilder from 'xmlbuilder';
@@ -15,7 +15,7 @@ export class RecordMacro {
     s_width: number;
     s_height: number;
     macro: Array<Groupable>;
-    lastObj: KeyStroke | SpecialKeyStroke | Click | Scroll
+    lastObj: Incremental
     lastActionTime: number;
     recording: boolean;
     started: boolean;
@@ -32,84 +32,27 @@ export class RecordMacro {
         this.overlayWindow = createOverlayWindow();
 
         // Hooks
-        iohook.on('mouseup', (event) => this.onMouseClick(event));
-        iohook.on('mousewheel', (event) => this.onMouseScroll(event));
+        //iohook.on('mouseup', (event) => this.onMouseClick(event));
+        //iohook.on('mousewheel', (event) => this.onMouseScroll(event));
         iohook.on('keydown', (event) => this.onKeyPress(event));
-        iohook.on('keyup', (event) => this.onKeyRelease(event)); // Removed to use only keypress
+        iohook.on('keyup', (event) => this.onKeyRelease(event));
         iohook.start();
     }
 
     resetVars(): void {
         this.macro = [ new Groupable(new Actions("START")) ];
+        this.lastObj = null;
         this.lastActionTime = null;
         this.started = false;
         this.recording = false;
 
-        this.lastObj = null;
-    }
-
-    addNew(newObj: KeyStroke | SpecialKeyStroke | Click | Scroll): boolean {
-        if (!this.recording) {
-            return false;
-        }
-
-        // Create a new group if the new object are different from last
-        // and holdings are different
-        let lastGroup = this.macro[this.macro.length - 1];
-        if (lastGroup.items.length && lastGroup.items[0].constructor !== newObj.constructor) {
-            this.macro.push(new Groupable());
-            lastGroup = this.macro[this.macro.length - 1];
-        }
-
-        this.lastActionTime = Date.now();
-        lastGroup.addNew(newObj);
-        this.lastObj = newObj;
-
-        return true;
-    }
-
-    onKeyRelease(newObj: KeyStroke | SpecialKeyStroke): void {
-        // Update last button releaseIn or insert new holding group
-        if (newObj === this.lastObj) {
-            this.lastObj.release();
-        } else {
-            let holding = this.macro[this.macro.length - 1].holding
-            let isHolding = holding.indexOf(newObj)
-
-            if (isHolding) {
-                delete holding[isHolding];
-            } else {
-                holding
-            }
-
-            this.macro.push(new Groupable(null, holding));
-        }
-    }
-
-    onMouseClick(event: any): void {
-        // Record mouse Click
-        if (this.recording) {
-            const click = new Click(event.x, event.y, event.button);
-            this.addNew(click);
-        }
-    }
-
-    onMouseScroll(event: any): void {
-        // Record mouse Scroll
-        if (this.recording) {
-            const scroll = new Scroll(event.x, event.y, event.amount);
-            this.addNew(scroll);
-        }
     }
 
     onKeyPress(event: any): void {
         // Manage user inputs
-        console.log(event.rawcode);
-
-        if (event.rawcode === START_RECORD) {
-            this.startRecording();
-            return;
-        } else if (event.rawcode === STOP_RECORD) {
+        // Para parar precisa ser na entrada da tecla, se n ele captura tmb
+        // Pausa aqui para não pegar o TOGGLE_RECODE.keyUp
+        if (event.rawcode === STOP_RECORD) {
             this.stopRecording();
             return;
         } else if (event.rawcode === TOGGLE_RECORD) {
@@ -117,20 +60,98 @@ export class RecordMacro {
             return;
         }
 
-        if (this.recording) {
-            let keyStroke: KeyStroke | SpecialKeyStroke;
+        if (!this.recording) {
+            return;
+        }
 
-            if (
-                (event.rawcode >= 65 && event <= 90) || // A-Z
-                (event.rawcode == 32)
-            ) {
-                keyStroke = new KeyStroke(event.rawcode);
-            } else {
-                keyStroke = new SpecialKeyStroke(event);
+        let keyStroke: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event);
+
+        // Se ja existir um ultimo objeto, cria um holding
+        if (this.lastObj) {
+            var holding = this.macro[this.macro.length - 1].holding.slice(); // Slice copia a lista
+            holding.push(this.lastObj);
+            this.macro.push(new Groupable(null, holding));
+        }
+
+        this.lastObj = keyStroke;
+    }
+
+    onKeyRelease(event: any): void {
+        // Para iniciar precisa ser na saida da tecla, se não ele pega ela voltando
+        // Pausa aqui para não pegar o TOGGLE_RECODE.keyDown
+        if (event.rawcode === START_RECORD) {
+            this.startRecording();
+            return;
+        } else if (event.rawcode === TOGGLE_RECORD) {
+            return;
+        }
+
+        if (!this.recording) {
+            return;
+        }
+
+        // Update last button releaseIn or insert new holding group
+        let newKey: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event);
+        let lastGroup = this.macro[this.macro.length - 1];
+        var holding = lastGroup.holding.slice();
+
+        // Da apenas release se o ultimo apertado for o ultimo solto
+        // Se nao for, adiciona waitFor e cria novo grupo
+        if (newKey.equals(this.lastObj)) {
+            // Verifica se precisa de novo Group
+            if (lastGroup.groupType && !(newKey.constructor.name === lastGroup.groupType)) {
+                this.macro.push(new Groupable(null, holding));
             }
 
-            this.addNew(keyStroke);
+            this.lastObj.release()
+            this.macro[this.macro.length - 1].addNew(this.lastObj);
+            this.lastObj = null;
+        } else {
+            this.macro[this.macro.length - 1].addNew(new WaitForTime(Date.now() - this.lastActionTime));
+
+            var keyIndex = holding.findIndex(item => item.equals(newKey));
+            holding.splice(keyIndex, 1);
+
+            if (holding.length){
+                this.macro.push(new Groupable(null, holding));
+            }
         }
+
+        this.lastActionTime = Date.now()
+
+        return;
+    }
+
+    onMouseClick(event: any): void {
+        // Record mouse Click
+        if (!this.recording) {
+            return;
+        }
+
+        const click = new Click(event.x, event.y, event.button);
+        //this.addNew(click);
+    }
+
+    onMouseScroll(event: any): void {
+        // Record mouse Scroll
+        if (!this.recording) {
+            return;
+        }
+
+        const scroll = new Scroll(event.x, event.y, event.amount);
+        //this.addNew(scroll);
+    }
+
+    eventToKeyStroke(event: any): KeyStroke | SpecialKeyStroke {
+        if (
+            (event.rawcode >= 65 && event.rawcode <= 90) || // a-z
+            (event.rawcode == 32) ||
+            (event.rawcode >= 49 && event.rawcode <= 57)
+        ) {
+            return new KeyStroke(event.rawcode);
+        }
+
+        return new SpecialKeyStroke(event);
     }
 
     toggleRecordBool(newValue?: boolean): void {
@@ -145,8 +166,10 @@ export class RecordMacro {
     }
 
     togglePauseRecord(): void {
-        this.toggleRecordBool();
-        console.log(`Macro Recording: ${this.recording ? 'ON' : 'OFF'}`);
+        if (this.started) {
+            this.toggleRecordBool();
+            console.log(`Macro Recording: ${this.recording ? 'ON' : 'OFF'}`);
+        }
     }
 
     stopRecording(): void {
@@ -173,6 +196,7 @@ export class RecordMacro {
             console.log("Starting recording...");
             this.toggleRecordBool(true);
             this.started = true;
+            this.lastActionTime = Date.now();
 
             // Show Overlay
             this.overlayWindow.show();
@@ -199,6 +223,7 @@ export class RecordMacro {
             // Add Keystrokes Step-By-Step
             let steps = groupable.element("Steps");
             group.collapseList().forEach((step) => {
+            //group.items.forEach((step) => {
                 steps.element(step.toXML());
             })
         });

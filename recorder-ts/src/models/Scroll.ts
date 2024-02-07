@@ -18,7 +18,11 @@ export class Scroll extends Incremental {
         return dx === -1 ? "DOWN" : "UP";
     }
 
-    equals(value: Scroll): boolean {
+    equals(value: any): boolean {
+        if (!(value instanceof Scroll)) {
+            return false;
+        }
+
         return this.direction === value.direction;
     }
 

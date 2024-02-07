@@ -13,7 +13,7 @@ export abstract class Incremental {
     }
 
     release(): void {
-        this.releaseIn = this.pressed - Date.now();
+        this.releaseIn = Date.now() - this.pressed;
     }
 
     abstract equals(value: Incremental): boolean;

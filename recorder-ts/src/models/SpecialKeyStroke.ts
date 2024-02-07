@@ -1,7 +1,10 @@
 import { KeyStroke } from "./KeyStroke";
 
-enum KeyEnum {
+enum SpecialEnum {
+    backspace = 8,
+    capslock = 20,
     esc = 27,
+    printscreen = 44,
     f1 = 112,
     f2 = 113,
     f3 = 114,
@@ -14,6 +17,16 @@ enum KeyEnum {
     f10 = 121,
     f11 = 122,
     f12 = 123,
+    numlock = 144
+}
+
+enum ControlEnum {
+    l_shift = 160,
+    r_shift = 161,
+    l_ctrl = 162,
+    r_ctrl = 163,
+    l_alt = 164,
+    r_alt = 165,
 }
 
 export class SpecialKeyStroke extends KeyStroke {
@@ -28,20 +41,24 @@ export class SpecialKeyStroke extends KeyStroke {
         else if (event.altKey) { this.name = "alt" }
         else if (event.metaKey) { this.name = "meta" }
         else {
-            this.name = KeyEnum[button as KeyEnum];
+            this.name = SpecialEnum[button as SpecialEnum];
         }
     }
 
-    equals(value: KeyStroke | SpecialKeyStroke): boolean {
+    equals(value: any): boolean {
+        if (!(value instanceof KeyStroke)) {
+            return false;
+        }
+
         return this.button === value.button;
     }
 
     toXML(): any {
         let baseObject: any = {
             SpecialKeyStroke: {
-                '@times': this.times,
                 '@button': this.button,
-                '@test': this.name
+                '@name': this.name,
+                '@released': this.releaseIn
             }
         }
 

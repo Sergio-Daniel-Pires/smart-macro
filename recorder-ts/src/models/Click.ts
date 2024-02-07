@@ -12,7 +12,11 @@ export class Click extends Incremental {
         this.button = button;
     }
 
-    equals(value: Click): boolean {
+    equals(value: any): boolean {
+        if (!(value instanceof Click)) {
+            return false;
+        }
+
         return (
             this.x === value.x && this.y === value.y && this.button === value.button
         );
