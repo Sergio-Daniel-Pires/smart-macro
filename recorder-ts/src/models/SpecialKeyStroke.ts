@@ -2,6 +2,7 @@ import { KeyStroke } from "./KeyStroke";
 
 enum SpecialEnum {
     backspace = 8,
+    enter = 13,
     capslock = 20,
     esc = 27,
     printscreen = 44,

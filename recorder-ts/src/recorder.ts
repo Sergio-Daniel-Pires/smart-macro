@@ -27,13 +27,18 @@ export class RecordMacro {
         // this.s_width = screenSize.width;
         // this.s_height = screenSize.height;
 
+        // Initializate macro vars
         this.resetVars();
+
         // External children
         this.overlayWindow = createOverlayWindow();
 
         // Hooks
-        //iohook.on('mouseup', (event) => this.onMouseClick(event));
+        iohook.on('mousedown', (event) => this.onMouseClick(event));
+        iohook.on('mouseup', (event) => this.onMouseClick(event));
+
         //iohook.on('mousewheel', (event) => this.onMouseScroll(event));
+
         iohook.on('keydown', (event) => this.onKeyPress(event));
         iohook.on('keyup', (event) => this.onKeyRelease(event));
         iohook.start();
@@ -46,6 +51,17 @@ export class RecordMacro {
         this.started = false;
         this.recording = false;
 
+    }
+
+    buttonPress(newObj: Incremental): void {
+        // Se ja existir um ultimo objeto, cria um holding
+        if (this.lastObj) {
+            var holding = this.macro[this.macro.length - 1].holding.slice(); // Slice copia a lista
+            holding.push(this.lastObj);
+            this.macro.push(new Groupable(null, holding));
+        }
+
+        this.lastObj = newObj;
     }
 
     onKeyPress(event: any): void {
@@ -66,14 +82,34 @@ export class RecordMacro {
 
         let keyStroke: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event);
 
-        // Se ja existir um ultimo objeto, cria um holding
-        if (this.lastObj) {
-            var holding = this.macro[this.macro.length - 1].holding.slice(); // Slice copia a lista
-            holding.push(this.lastObj);
+        this.buttonPress(keyStroke);
+    }
+
+    buttonRelease(newObj: Incremental) {
+        let lastGroup = this.macro[this.macro.length - 1];
+        var holding = lastGroup.holding.slice();
+
+        // Da apenas release se o ultimo apertado for o ultimo solto
+        // Se nao for, adiciona waitFor e cria novo grupo
+        if (newObj.equals(this.lastObj)) {
+            // Verifica se precisa de novo Group
+            if (lastGroup.groupType && !(newObj.constructor.name === lastGroup.groupType)) {
+                this.macro.push(new Groupable(null, holding));
+            }
+
+            this.lastObj.release()
+            this.macro[this.macro.length - 1].addNew(this.lastObj);
+            this.lastObj = null;
+        } else {
+            this.macro[this.macro.length - 1].addNew(new WaitForTime(Date.now() - this.lastActionTime));
+
+            var keyIndex = holding.findIndex(item => item.equals(newObj));
+            holding.splice(keyIndex, 1);
+
             this.macro.push(new Groupable(null, holding));
         }
 
-        this.lastObj = keyStroke;
+        this.lastActionTime = Date.now()
     }
 
     onKeyRelease(event: any): void {
@@ -92,34 +128,7 @@ export class RecordMacro {
 
         // Update last button releaseIn or insert new holding group
         let newKey: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event);
-        let lastGroup = this.macro[this.macro.length - 1];
-        var holding = lastGroup.holding.slice();
-
-        // Da apenas release se o ultimo apertado for o ultimo solto
-        // Se nao for, adiciona waitFor e cria novo grupo
-        if (newKey.equals(this.lastObj)) {
-            // Verifica se precisa de novo Group
-            if (lastGroup.groupType && !(newKey.constructor.name === lastGroup.groupType)) {
-                this.macro.push(new Groupable(null, holding));
-            }
-
-            this.lastObj.release()
-            this.macro[this.macro.length - 1].addNew(this.lastObj);
-            this.lastObj = null;
-        } else {
-            this.macro[this.macro.length - 1].addNew(new WaitForTime(Date.now() - this.lastActionTime));
-
-            var keyIndex = holding.findIndex(item => item.equals(newKey));
-            holding.splice(keyIndex, 1);
-
-            if (holding.length){
-                this.macro.push(new Groupable(null, holding));
-            }
-        }
-
-        this.lastActionTime = Date.now()
-
-        return;
+        this.buttonRelease(newKey);
     }
 
     onMouseClick(event: any): void {
@@ -128,8 +137,12 @@ export class RecordMacro {
             return;
         }
 
-        const click = new Click(event.x, event.y, event.button);
-        //this.addNew(click);
+        const newClick = new Click(event.x, event.y, event.button);
+        if (event.type === 'mousedown') {
+            this.buttonPress(newClick);
+        } else {
+            this.buttonRelease(newClick);
+        }
     }
 
     onMouseScroll(event: any): void {
@@ -138,15 +151,16 @@ export class RecordMacro {
             return;
         }
 
-        const scroll = new Scroll(event.x, event.y, event.amount);
-        //this.addNew(scroll);
+        // Not Implemented Yet
+        const mouseScroll = new Scroll(event.x, event.y, event.amount);
+        return;
     }
 
     eventToKeyStroke(event: any): KeyStroke | SpecialKeyStroke {
         if (
             (event.rawcode >= 65 && event.rawcode <= 90) || // a-z
-            (event.rawcode == 32) ||
-            (event.rawcode >= 49 && event.rawcode <= 57)
+            (event.rawcode == 32) ||                        // Space
+            (event.rawcode >= 48 && event.rawcode <= 57)    // Numbers 0-9
         ) {
             return new KeyStroke(event.rawcode);
         }
@@ -161,6 +175,7 @@ export class RecordMacro {
         }
 
         this.recording = newValue;
+
         // IPC Send to Child
         this.overlayWindow.webContents.send('recording-state-changed', newValue);
     }
@@ -223,7 +238,6 @@ export class RecordMacro {
             // Add Keystrokes Step-By-Step
             let steps = groupable.element("Steps");
             group.collapseList().forEach((step) => {
-            //group.items.forEach((step) => {
                 steps.element(step.toXML());
             })
         });

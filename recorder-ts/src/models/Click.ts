@@ -29,10 +29,9 @@ export class Click extends Incremental {
     toXML(): any {
         let baseObject: any = {
             Click: {
-                '@times': this.times,
+                '@button': this.button,
                 '@x': this.x,
                 '@y': this.y,
-                '@button': this.button,
             }
         }
 
