@@ -1,21 +1,25 @@
+import { Actions } from "./Actions";
+
+export type KeyAction = "press" | "release" | "full"
+
 export abstract class Incremental {
-    times: number;
     pressed: number
-    releaseIn: number;
+    keyAction: KeyAction
+    delay: number
 
-    constructor() {
-        this.times = 1;
+    constructor(keyAction: KeyAction) {
         this.pressed = Date.now();
+        this.keyAction = keyAction;
+
+        // Only has delay if was pressed and released in sequence
+        this.delay = null;
     }
 
-    increment(): void {
-        this.times += 1;
+    release (): void {
+        this.delay = Date.now() - this.pressed;
+        this.keyAction = "full";
     }
 
-    release(): void {
-        this.releaseIn = Date.now() - this.pressed;
-    }
-
-    abstract equals(value: Incremental): boolean;
+    abstract equals(value: Incremental | Actions): boolean;
     abstract toXML(): string;
 }

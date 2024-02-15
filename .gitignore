@@ -3,5 +3,8 @@ __pycache__/
 .vscode/
 *.xml
 
+*.tldr
+*.txt
+
 node_modules/
 dist/

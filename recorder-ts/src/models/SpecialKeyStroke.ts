@@ -1,47 +1,46 @@
+import { KeyAction } from "./Incremental";
 import { KeyStroke } from "./KeyStroke";
 
-enum SpecialEnum {
-    backspace = 8,
-    enter = 13,
-    capslock = 20,
-    esc = 27,
-    printscreen = 44,
-    f1 = 112,
-    f2 = 113,
-    f3 = 114,
-    f4 = 115,
-    f5 = 116,
-    f6 = 117,
-    f7 = 118,
-    f8 = 119,
-    f9 = 120,
-    f10 = 121,
-    f11 = 122,
-    f12 = 123,
-    numlock = 144
+export enum SpecialEnum {
+    Backspace = 8,
+    Enter = 13,
+    CapsLock = 20,
+    Escape = 27,
+    PrintScreen = 44,
+    F1 = 112,
+    F2 = 113,
+    F3 = 114,
+    F4 = 115,
+    F5 = 116,
+    F6 = 117,
+    F7 = 118,
+    F8 = 119,
+    F9 = 120,
+    F10 = 121,
+    F11 = 122,
+    F12 = 123,
+    NumLock = 144
 }
 
-enum ControlEnum {
-    l_shift = 160,
-    r_shift = 161,
-    l_ctrl = 162,
-    r_ctrl = 163,
-    l_alt = 164,
-    r_alt = 165,
+export enum ControlEnum {
+    LeftShift = 160,
+    RightShift = 161,
+    LeftControl = 162,
+    RightControl = 163,
+    LeftAlt = 164,
+    RightAlt = 165,
 }
 
 export class SpecialKeyStroke extends KeyStroke {
     name: string
 
-    constructor(event: any) {
+    constructor(event: any, keyAction: KeyAction) {
         let button: number = event.rawcode
-        super(button);
+        super(button, keyAction);
 
-        if (event.shiftKey) { this.name = "shift" }
-        else if (event.ctrlKey) { this.name = "ctrl" }
-        else if (event.altKey) { this.name = "alt" }
-        else if (event.metaKey) { this.name = "meta" }
-        else {
+        if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+            this.name = ControlEnum[button as ControlEnum]
+        } else {
             this.name = SpecialEnum[button as SpecialEnum];
         }
     }
@@ -59,7 +58,7 @@ export class SpecialKeyStroke extends KeyStroke {
             SpecialKeyStroke: {
                 '@button': this.button,
                 '@name': this.name,
-                '@released': this.releaseIn
+                '@action': this.keyAction
             }
         }
 

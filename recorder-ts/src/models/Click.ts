@@ -1,12 +1,12 @@
-import { Incremental } from "./Incremental";
+import { Incremental, KeyAction } from "./Incremental";
 
 export class Click extends Incremental {
     x: number;
     y: number;
     button: string;
 
-    constructor(x: number, y: number, button: string) {
-        super();
+    constructor(x: number, y: number, button: string, keyAction: KeyAction) {
+        super(keyAction);
         this.x = x;
         this.y = y;
         this.button = button;
@@ -22,16 +22,13 @@ export class Click extends Incremental {
         );
     }
 
-    toString(): string {
-        return `'${this.button}' (${this.x}, ${this.y}) ${this.times}x`;
-    }
-
     toXML(): any {
         let baseObject: any = {
             Click: {
                 '@button': this.button,
                 '@x': this.x,
                 '@y': this.y,
+                '@action': this.keyAction
             }
         }
 

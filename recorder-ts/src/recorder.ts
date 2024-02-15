@@ -1,32 +1,30 @@
 import * as iohook from 'iohook';
 import {
-    KeyStroke, SpecialKeyStroke, Click, Scroll, Groupable, WaitForTime, Actions, Incremental
+    KeyStroke, SpecialKeyStroke, Click, Scroll, Actions, Incremental
 } from './models';
 import * as fs from 'fs';
 import * as xmlbuilder from 'xmlbuilder';
 import { createOverlayWindow } from "./overlay";
 import { BrowserWindow } from 'electron';
+import { Holding } from './models/Holding';
+import { keyboard, Key } from "@nut-tree/nut-js";
+import * as xml2js from "xml2js";
 
 const START_RECORD = 112;
+const RUN_RECORD = 114;
 const STOP_RECORD = 27;
 const TOGGLE_RECORD = 119;
 
 export class RecordMacro {
-    s_width: number;
-    s_height: number;
-    macro: Array<Groupable>;
-    lastObj: Incremental
-    lastActionTime: number;
+    macro: Holding;
+    parent: Holding;
     recording: boolean;
     started: boolean;
+    lastActionTime: number
 
     overlayWindow: BrowserWindow;
 
     constructor() {
-        // const screenSize = robot.getScreenSize();
-        // this.s_width = screenSize.width;
-        // this.s_height = screenSize.height;
-
         // Initializate macro vars
         this.resetVars();
 
@@ -37,7 +35,7 @@ export class RecordMacro {
         iohook.on('mousedown', (event) => this.onMouseClick(event));
         iohook.on('mouseup', (event) => this.onMouseClick(event));
 
-        //iohook.on('mousewheel', (event) => this.onMouseScroll(event));
+        iohook.on('mousewheel', (event) => this.onMouseScroll(event));
 
         iohook.on('keydown', (event) => this.onKeyPress(event));
         iohook.on('keyup', (event) => this.onKeyRelease(event));
@@ -45,23 +43,35 @@ export class RecordMacro {
     }
 
     resetVars(): void {
-        this.macro = [ new Groupable(new Actions("START")) ];
-        this.lastObj = null;
-        this.lastActionTime = null;
+        // Set parent as macro
+        this.macro = new Holding(null, new Actions("START"))
+        this.parent = this.macro;
+
         this.started = false;
         this.recording = false;
-
+        this.lastActionTime = null;
     }
 
-    buttonPress(newObj: Incremental): void {
-        // Se ja existir um ultimo objeto, cria um holding
-        if (this.lastObj) {
-            var holding = this.macro[this.macro.length - 1].holding.slice(); // Slice copia a lista
-            holding.push(this.lastObj);
-            this.macro.push(new Groupable(null, holding));
+    addNew (newObj: Incremental): void {
+        var lastItem = this.parent.getLast();
+
+        if (lastItem instanceof Incremental && newObj.equals(lastItem) && lastItem.keyAction === "press") {
+            lastItem.release();
+        } else if (
+            lastItem instanceof Actions ||
+            (lastItem.keyAction !== "press" && newObj.keyAction === "press")
+        ){
+            this.parent.addNew(newObj);
+        } else if (lastItem.keyAction === "press") {
+            var newHolding = new Holding(this.parent, newObj)
+            this.parent.addNew(newHolding);
+            this.parent = newHolding;
+        } else {
+            this.parent = this.parent.parent;
+            this.parent.addNew(newObj);
         }
 
-        this.lastObj = newObj;
+        this.lastActionTime = Date.now();
     }
 
     onKeyPress(event: any): void {
@@ -74,42 +84,31 @@ export class RecordMacro {
         } else if (event.rawcode === TOGGLE_RECORD) {
             this.togglePauseRecord();
             return;
+        } else if (event.rawcode === RUN_RECORD) {
+            const xml = fs.readFileSync('macro.xml', 'utf8');
+            xml2js.parseString(xml, { explicitChildren: true, preserveChildrenOrder: true }, (err, result) => {
+                if (err) {
+                    console.error('Erro ao parsear XML:', err);
+                    return;
+                }
+
+                function createArrayFromObject(obj: any): void {
+                    const steps = obj.Macro.Steps[0].$$;
+                    steps.forEach((step: any) => {
+                        console.log(step)
+                    })
+                }
+
+                createArrayFromObject(result);
+            });
         }
 
         if (!this.recording) {
             return;
         }
 
-        let keyStroke: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event);
-
-        this.buttonPress(keyStroke);
-    }
-
-    buttonRelease(newObj: Incremental) {
-        let lastGroup = this.macro[this.macro.length - 1];
-        var holding = lastGroup.holding.slice();
-
-        // Da apenas release se o ultimo apertado for o ultimo solto
-        // Se nao for, adiciona waitFor e cria novo grupo
-        if (newObj.equals(this.lastObj)) {
-            // Verifica se precisa de novo Group
-            if (lastGroup.groupType && !(newObj.constructor.name === lastGroup.groupType)) {
-                this.macro.push(new Groupable(null, holding));
-            }
-
-            this.lastObj.release()
-            this.macro[this.macro.length - 1].addNew(this.lastObj);
-            this.lastObj = null;
-        } else {
-            this.macro[this.macro.length - 1].addNew(new WaitForTime(Date.now() - this.lastActionTime));
-
-            var keyIndex = holding.findIndex(item => item.equals(newObj));
-            holding.splice(keyIndex, 1);
-
-            this.macro.push(new Groupable(null, holding));
-        }
-
-        this.lastActionTime = Date.now()
+        let keyStroke: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event, 'press');
+        this.addNew(keyStroke);
     }
 
     onKeyRelease(event: any): void {
@@ -126,23 +125,27 @@ export class RecordMacro {
             return;
         }
 
-        // Update last button releaseIn or insert new holding group
-        let newKey: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event);
-        this.buttonRelease(newKey);
+        let keyStroke: KeyStroke | SpecialKeyStroke = this.eventToKeyStroke(event, 'release');
+        this.addNew(keyStroke)
     }
 
     onMouseClick(event: any): void {
+        let eventType: "press" | "release";
+
         // Record mouse Click
         if (!this.recording) {
             return;
         }
 
-        const newClick = new Click(event.x, event.y, event.button);
         if (event.type === 'mousedown') {
-            this.buttonPress(newClick);
+            eventType = 'press'
         } else {
-            this.buttonRelease(newClick);
+            eventType = 'release'
         }
+
+        const newClick = new Click(event.x, event.y, event.button, eventType);
+
+        this.addNew(newClick);
     }
 
     onMouseScroll(event: any): void {
@@ -151,21 +154,21 @@ export class RecordMacro {
             return;
         }
 
-        // Not Implemented Yet
         const mouseScroll = new Scroll(event.x, event.y, event.amount);
-        return;
+
+        this.addNew(mouseScroll);
     }
 
-    eventToKeyStroke(event: any): KeyStroke | SpecialKeyStroke {
+    eventToKeyStroke(event: any, eventType: 'press' | 'release'): KeyStroke | SpecialKeyStroke {
         if (
             (event.rawcode >= 65 && event.rawcode <= 90) || // a-z
             (event.rawcode == 32) ||                        // Space
             (event.rawcode >= 48 && event.rawcode <= 57)    // Numbers 0-9
         ) {
-            return new KeyStroke(event.rawcode);
+            return new KeyStroke(event.rawcode, eventType);
         }
 
-        return new SpecialKeyStroke(event);
+        return new SpecialKeyStroke(event, eventType);
     }
 
     toggleRecordBool(newValue?: boolean): void {
@@ -197,8 +200,7 @@ export class RecordMacro {
             // Hide Overlay
             this.overlayWindow.hide();
 
-            // Add END to list and export to XML
-            this.macro.push(new Groupable(new Actions("END")));
+            // export to XML
             this.export();
 
             // Reset macro
@@ -211,7 +213,6 @@ export class RecordMacro {
             console.log("Starting recording...");
             this.toggleRecordBool(true);
             this.started = true;
-            this.lastActionTime = Date.now();
 
             // Show Overlay
             this.overlayWindow.show();
@@ -222,27 +223,40 @@ export class RecordMacro {
         // Export last macro to XML
         const xmlDoc = xmlbuilder.create('Macro');
 
-        this.macro.forEach((group) => {
-            let groupable = xmlDoc.element("Groupable")
-
-            // Create list to items that are holding
-            let holding = group.holding;
-            if (holding.length) {
-                let holdingGroup = groupable.element("Holding");
-
-                group.holding.forEach((holding) => {
-                    holdingGroup.element(holding.toXML());
-                })
-            }
-
-            // Add Keystrokes Step-By-Step
-            let steps = groupable.element("Steps");
-            group.collapseList().forEach((step) => {
-                steps.element(step.toXML());
-            })
-        });
+        const steps = xmlDoc.element("Steps");
+        this.macro.addHolding(steps);
 
         const xmlString = xmlDoc.end({ pretty: true });
         fs.writeFileSync('macro.xml', xmlString, 'utf-8');
     }
 }
+
+async function executeActions(steps: any) {
+    for (const step of steps) {
+        let keyCode;
+
+        console.log(step);
+        if (step.SpecialKeyStroke) {
+            keyCode = parseInt(Key[step.SpecialKeyStroke.$.name]);
+
+            if (step.SpecialKeyStroke.$.action === 'full') {
+                await keyboard.pressKey(keyCode);
+                await keyboard.releaseKey(keyCode);
+            } else if (step.SpecialKeyStroke.$.action === 'press') {
+                await keyboard.pressKey(keyCode);
+            } else if (step.SpecialKeyStroke.$.action === 'release') {
+                await keyboard.releaseKey(keyCode);
+            }
+        } else if (step.KeyStroke) {
+            let keyCode = step.KeyStroke.$.button
+
+            if (step.KeyStroke.$.action === 'full') {
+                await keyboard.type(keyCode);
+            }
+        }
+        if (step.Holding) {
+            await executeActions(step.Holding);
+        }
+    }
+}
+

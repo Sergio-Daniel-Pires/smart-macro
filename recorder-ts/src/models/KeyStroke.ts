@@ -1,10 +1,10 @@
-import { Incremental } from "./Incremental";
+import { Incremental, KeyAction } from "./Incremental";
 
 export class KeyStroke extends Incremental {
     button: number;
 
-    constructor(button: number) {
-        super();
+    constructor(button: number, keyAction: KeyAction) {
+        super(keyAction);
         this.button = button;
     }
 
@@ -16,15 +16,11 @@ export class KeyStroke extends Incremental {
         return this.button === value.button;
     }
 
-    toString(): string {
-        return `${this.button}`;
-    }
-
     toXML(): any {
         let baseObject: any = {
             KeyStroke: {
                 '@button': this.button,
-                '@released': this.releaseIn
+                '@action': this.keyAction
             }
         }
 
