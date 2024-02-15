@@ -9,10 +9,6 @@ export class Actions {
         return this.action == value.action;
     }
 
-    toString(): string {
-        return this.action;
-    }
-
     toXML(): any {
         return {
             Actions: {

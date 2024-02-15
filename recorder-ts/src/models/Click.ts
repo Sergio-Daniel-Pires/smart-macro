@@ -1,40 +1,35 @@
-import { Incremental } from "./Incremental";
+import { Incremental, KeyAction } from "./Incremental";
 
 export class Click extends Incremental {
     x: number;
     y: number;
     button: string;
 
-    constructor(lastActionTime: number, x: number, y: number, button: string) {
-        super(lastActionTime);
+    constructor(x: number, y: number, button: string, keyAction: KeyAction) {
+        super(keyAction);
         this.x = x;
         this.y = y;
         this.button = button;
     }
 
-    equals(value: Click): boolean {
-        return (
-            this.delay == value.delay && this.x === value.x &&
-            this.y === value.y && this.button === value.button
-        );
-    }
+    equals(value: any): boolean {
+        if (!(value instanceof Click)) {
+            return false;
+        }
 
-    toString(): string {
-        return `'${this.button}' (${this.x}, ${this.y}) ${this.times}x`;
+        return (
+            this.x === value.x && this.y === value.y && this.button === value.button
+        );
     }
 
     toXML(): any {
         let baseObject: any = {
             Click: {
-                '@times': this.times,
+                '@button': this.button,
                 '@x': this.x,
                 '@y': this.y,
-                '@button': this.button,
+                '@action': this.keyAction
             }
-        }
-
-        if (this.delay) {
-            baseObject.Click['@delay'] = this.delay;
         }
 
         return baseObject;

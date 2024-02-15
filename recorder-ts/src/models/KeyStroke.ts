@@ -1,31 +1,27 @@
-import { Incremental } from "./Incremental";
-import { SpecialKeyStroke } from "./SpecialKeyStroke";
+import { Incremental, KeyAction } from "./Incremental";
 
 export class KeyStroke extends Incremental {
     button: number;
 
-    constructor(lastActionTime: number, button: number) {
-        super(lastActionTime);
+    constructor(button: number, keyAction: KeyAction) {
+        super(keyAction);
         this.button = button;
     }
 
-    equals(value: KeyStroke | SpecialKeyStroke): boolean {
-        return this.button === value.button;
-    }
+    equals(value: any): boolean {
+        if (!(value instanceof KeyStroke)) {
+            return false;
+        }
 
-    toString(): string {
-        return `${this.button}`;
+        return this.button === value.button;
     }
 
     toXML(): any {
         let baseObject: any = {
             KeyStroke: {
-                '@button': this.button
+                '@button': this.button,
+                '@action': this.keyAction
             }
-        }
-
-        if (this.delay) {
-            baseObject.KeyStroke['@delay'] = this.delay;
         }
 
         return baseObject;
